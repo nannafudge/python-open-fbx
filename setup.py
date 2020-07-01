@@ -1,25 +1,36 @@
-# -*- coding: utf-8 -*-
-"""
-    Setup file for python_open_fbx.
-    Use setup.cfg to configure your project.
-
-    This file was generated with PyScaffold 3.2.3.
-    PyScaffold helps you to put up the scaffold of your new Python project.
-    Learn more under: https://pyscaffold.org/
-"""
+import platform
 import sys
+import os
 
-from pkg_resources import VersionConflict, require
-from setuptools import setup
+from glob import glob
 
-try:
-    require('setuptools>=38.3')
-except VersionConflict:
-    print("Error: version of setuptools is too old (<38.3)!")
-    sys.exit(1)
+from setuptools import setup, Extension
 
 
-if __name__ == "__main__":
+def build(target_platform):
+    if target_platform == "windows":
+        os_classifier = "Operating System :: Microsoft :: Windows :: Windows 10"
+    if target_platform == "linux":
+        os_classifier = "Operating System :: POSIX :: Linux"
+
     setup(
-        use_pyscaffold=True
+        platforms=target_platform,
+        packages=[
+            "openfbx",
+            "openfbx.structs"
+        ],
+        data_files=[("openfbx", ["ofbx/openfbx.dll"])],
+        classifiers=[
+            'Development Status :: 2 - Pre-Alpha',
+            'License :: OSI Approved :: MIT License',
+            'Topic :: Artistic Software',
+            'Topic :: Multimedia :: Graphics :: 3D Modeling',
+            'Topic :: Software Development :: Libraries',
+            os_classifier
+        ],
     )
+
+
+if __name__ == '__main__':
+    # TODO: Build for linux too, add command line args
+    build("windows")

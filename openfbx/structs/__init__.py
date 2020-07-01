@@ -1,0 +1,1 @@
+from openfbx.structs.Vec2 import Vec2
