@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
-from pkg_resources import get_distribution, DistributionNotFound
-import platform
+import _ctypes
+import ctypes
+import logging
+from itertools import count
+from typing import Any, overload, Iterable, List
 
+from pkg_resources import get_distribution, DistributionNotFound
+
+from openfbx import DLL
+from openfbx.structs.OptionalError import OptionalError
 from openfbx.structs.Allocator import Allocator
-from openfbx.structs.Color import Vec3
+from openfbx.structs.Color import Color
 from openfbx.structs.Element import Element
-from openfbx.structs.IScene import IScene
+from openfbx.structs.interfaces.IScene import IScene
 from openfbx.structs.Matrix import Matrix
 from openfbx.structs.Object import Object
-from openfbx.structs.ObjectType import ObjectType
 from openfbx.structs.Scene import Scene
 from openfbx.structs.Type import Type
 
@@ -23,90 +29,94 @@ finally:
 
 from openfbx.structs import *
 
-import ctypes
+DLL.ofbx.Load.restype = ctypes.POINTER(Scene)
 
-if platform.system() == "Windows":
-    lib = ctypes.WinDLL('openfbx.dll')
+DLL.ofbx.FbxTimeToSeconds.restype = ctypes.c_double
+DLL.ofbx.FbxTimeToSeconds.argtypes = [ctypes.c_int64]
 
-if platform.system() == "Linux":
-    lib = ctypes.CDLL('openfbx.lib')
+DLL.ofbx.SecondsToFbxTime.restype = ctypes.c_int64
+DLL.ofbx.SecondsToFbxTime.argtypes = [ctypes.c_double]
 
-# Functions
+DLL.ofbx.ParseVideo.restype = None
+DLL.ofbx.ParseVideo.argtypes = [Scene, Element, Allocator]
 
-# Object.struct
-lib.ObjectGetParent.argtypes = []
-lib.ObjectGetParent.restype = ctypes.pointer(Object)
-lib.ObjectResolveObjectLinkInt.argtypes = [ctypes.c_int]
-lib.ObjectResolveObjectLinkInt.restype = ctypes.pointer(Object)
-lib.ObjectResolveObjectLinkType.argtypes = [Type, ctypes.c_char_p, ctypes.c_int]
-lib.ObjectResolveObjectLinkType.restype = ctypes.pointer(Object)
-lib.ObjectResolveObjectLinkReverse.argtypes = [Type]
-lib.ObjectResolveObjectLinkReverse.restype = ctypes.pointer(Object)
-lib.ObjectGetScene.argtypes = []
-lib.ObjectGetScene.restype = IScene
-lib.ObjectGetLocalTransform.argtypes = []
-lib.ObjectGetLocalTransform.restype = Matrix
-lib.ObjectGetGlobalTransform.argtypes = []
-lib.ObjectGetGlobalTransform.restype = Matrix
-lib.ObjectGetLocalScaling.argtypes = []
-lib.ObjectGetLocalScaling.restype = Vec3
-lib.ObjectGetLocalRotation.argtypes = []
-lib.ObjectGetLocalRotation.restype = Vec3
-lib.ObjectGetPreRotation.argtypes = []
-lib.ObjectGetPreRotation.restype = Vec3
-lib.ObjectGetLocalTranslation.argtypes = []
-lib.ObjectGetLocalTranslation.restype = Vec3
-lib.ObjectEvalLocal1.argtypes = []
-lib.ObjectEvalLocal1.restype = Matrix
-lib.ObjectEvalLocal2.argtypes = []
-lib.ObjectEvalLocal2.restype = Matrix
-lib.ObjectIsNode.argtypes = []
-lib.ObjectIsNode.restype = ctypes.c_bool
+DLL.ofbx.ParseTexture.restype = ctypes.Structure
+DLL.ofbx.ParseTexture.argtypes = [Scene, Element, Allocator]
 
-lib.ObjectGetScalingPivot.argtypes = []
-lib.ObjectGetScalingPivot.restype = Vec3
-lib.ObjectGetScalingOffset.argtypes = []
-lib.ObjectGetScalingOffset.restype = Vec3
-lib.ObjectGetPostRotation.argtypes = []
-lib.ObjectGetPostRotation.restype = Vec3
-lib.ObjectGetRotationPivot.argtypes = []
-lib.ObjectGetRotationPivot.restype = Vec3
-lib.ObjectGetRotationOffset.argtypes = []
-lib.ObjectGetRotationOffset.restype = Vec3
-lib.ObjectGetRotationOrder.argtypes = []
-lib.ObjectGetRotationOrder.restype = ObjectType
+DLL.ofbx.ParsePose.restype = ctypes.Structure
+DLL.ofbx.ParsePose.argtypes = [Scene, Element, Allocator]
 
-PostprocessBlendShapeChannel
-PostprocessCluter
-PostprocessPose
-PostprocessShape
+DLL.ofbx.sync_job_processor.restype = None
+DLL.ofbx.sync_job_processor.argTypes = [ctypes.CFUNCTYPE, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_uint32]
 
-lib.FromString.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.py_object]
-lib.FromString.restype = ctypes.c_char_p
-lib.ParseVideo.argtypes = [ctypes.byref(Scene), ctypes.byref(Element), ctypes.byref(Allocator)]
-lib.ParseVideo.restype = None
-lib.GetEmebeddedData.argtypes = []
-lib.GetEmebeddedData.restype = ctypes.
+class _Array(ctypes.Array):
+    arr = []
 
-lib.IElementPropertyGetCount.restype = ctypes.c_int
+    _type_ = ctypes.c_int * 1
+    _length_ = arr.__len__()
 
-lib.fbx_time_to_seconds.rettypes = ctypes.c_double
-lib.fbx_time_to_seconds.argtypes = ctypes.c_int
-lib.from_string.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double)]
+    def __init__(self, *args: Any) -> None:
+        arr = args
 
-lib.load.rettypes = Vector2
-lib.load.argtypes = [ctypes.POINTER(ctypes.c_int8), ctypes.c_int, ctypes.c_int, ctypes.c_void_p, ctypes.c_void_p]
+    @overload
+    def __getitem__(self, i: int) -> Any:
+        return self.arr.__getitem__(i)
+
+    @overload
+    def __getitem__(self, s: slice) -> List[Any]:
+        items = []
+        s.stop = max(s.stop, len(self.arr))
+
+        for i in range(s.start, s.stop, s.step):
+            items.append(self.arr.__getitem__(i))
+
+        return items
+
+    def __getitem__(self, i: int) -> Any:
+        return self.arr.__getitem__(i)
+
+    @overload
+    def __setitem__(self, s: slice, o: Iterable[Any]) -> None:
+        s.stop = max(s.stop, len(self.arr))
+
+        for obj in o:
+            for i in range(s.start, s.stop, s.step):
+                self.arr.__setitem__(i, obj)
+
+    def __setitem__(self, i: int, o: Any) -> None:
+        self.arr.__setitem__(i, o)
 
 
-def load(data, size, flags, job_proocessor, job_user_ptr):
-    lib.load(data, size, flags, job_proocessor, job_user_ptr)
+def load(filepath):
+    with (open(filepath, 'rb')) as buffer:
+        fbx = buffer.read()
 
+        buffer = (ctypes.c_uint8 * len(fbx))()
+
+        for i, byte in enumerate(fbx):
+            buffer[i] = int(byte)
+
+        DLL.ofbx.Load.argtypes = [ctypes.POINTER(ctypes.c_uint8 * len(fbx)), ctypes.c_int, ctypes.c_uint64]
+        return DLL.ofbx.Load(ctypes.pointer(buffer), len(fbx), ctypes.c_uint64(0), None, None).contents
+
+
+def load_raw(data, size, flags, job_processor, job_user_ptr):
+    return DLL.ofbx.Load(data, size, flags, job_processor, job_user_ptr).contents
 
 def fbx_time_to_seconds(time):
-    lib.fbx_time_to_seconds(ctypes.c_int(time))
+    return DLL.ofbx.FbxTimeToSeconds(ctypes.c_int(time)).value
 
+def seconds_to_fbx_time(time):
+    return DLL.ofbx.SecondsToFbxTime(ctypes.c_double(time)).value
 
-def from_string_int(str, end, val):
-    if val is int:
-        lib.from_string.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int)]
-        lib.from_string(str, end, val)
+def parse_video(scene, element, allocator):
+    DLL.ofbx.ParseVideo(ctypes.byref(scene), ctypes.byref(element), ctypes.byref(allocator))
+
+def parse_texture(scene, element, allocator):
+    DLL.ofbx.ParseTexture(ctypes.byref(scene), ctypes.byref(element), ctypes.byref(allocator))
+
+def parse_pose(scene, element, allocator):
+    DLL.ofbx.ParsePose(ctypes.byref(scene), ctypes.byref(element), ctypes.byref(allocator))
+
+def sync_job_processor(job_function, func, data, size, count):
+    DLL.ofbx.sync_job_processor(job_function, ctypes.c_void_p(func), ctypes.c_void_p(data), ctypes.c_uint32(size), ctypes.c_uint32(count))

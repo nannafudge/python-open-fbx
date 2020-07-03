@@ -3,5 +3,5 @@ import ctypes
 
 class Matrix(Structure):
     _fields_ = [
-        ("m", ctypes.Array(ctypes.c_double))
+        ("m", ctypes.c_double * 16)
     ]

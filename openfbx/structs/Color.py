@@ -1,7 +1,7 @@
 from _ctypes import Structure
 import ctypes
 
-class Vec3(Structure):
+class Color(Structure):
     _fields_ = [
         ("r", ctypes.c_float),
         ("g", ctypes.c_float),

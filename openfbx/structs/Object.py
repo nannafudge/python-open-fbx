@@ -1,22 +1,43 @@
 import ctypes
 
-from openfbx import DLL, Scene
-from openfbx.structs.IElement import IElement
-from openfbx.structs.ObjectType import ObjectType
+from openfbx.structs.Fbx import Fbx
+from openfbx.structs.interfaces.IElement import IElement
 
-class Object(ctypes.Structure):
+
+class Object(Fbx):
     _fields_ = [
         ("id", ctypes.c_uint64),
-        ("name", ctypes.Array(ctypes.c_char)),
-        ("element", ctypes.py_object(IElement)),
-        ("node_attribute", ctypes.pointer(ctypes.py_object())),
-
+        ("name", ctypes.c_char * 128),
+        ("element", IElement),
+        ("node_attribute", ctypes.POINTER(Fbx)),
         ("is_node", ctypes.c_bool),
-        ("scene", ctypes.byref(ctypes.py_object(Scene)))
+        ("scene", Fbx)
     ]
 
+    class Type(ctypes.Structure):
+        _fields_ = [
+            ("ROOT", ctypes.c_int),
+            ("GEOMETRY", ctypes.c_int),
+            ("SHAPE", ctypes.c_int),
+            ("MATERIAL", ctypes.c_int),
+            ("MESH", ctypes.c_int),
+            ("TEXTURE", ctypes.c_int),
+            ("LIMB_NODE", ctypes.c_int),
+            ("NULL_NODE", ctypes.c_int),
+            ("NODE_ATTRIBUTE", ctypes.c_int),
+            ("CLUSTER", ctypes.c_int),
+            ("SKIN", ctypes.c_int),
+            ("BLEND_SHAPE", ctypes.c_int),
+            ("BLEND_SHAPE_CHANNEL", ctypes.c_int),
+            ("ANIMATION_STACK", ctypes.c_int),
+            ("ANIMATION_LAYER", ctypes.c_int),
+            ("ANIMATION_CURVE", ctypes.c_int),
+            ("ANIMATION_CURVE_NODE", ctypes.c_int),
+            ("POSE", ctypes.c_int)
+        ]
+
     def getType(self):
-        return ctypes.py_object(ObjectType)
+        return None
 
     def getScene(self):
         pass
@@ -79,4 +100,4 @@ class Object(ctypes.Structure):
         return False
 
     def resolveObjectLink(self, idx):
-        DLL.ofbx.__getitem__("resolveObjectLink")
+        return None

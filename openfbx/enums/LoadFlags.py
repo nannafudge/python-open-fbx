@@ -1,6 +1,8 @@
-from enum import Enum;
+import ctypes
 
-class LoadFlags(Enum):
-    TRIANGULATE = 1 << 0,
-    IGNORE_GEOMETRY = 1 << 1,
-    IGNORE_BLEND_SHAPES = 1 << 2
+class LoadFlags(ctypes.Structure):
+    _fields = [
+        ("TRIANGULATE", ctypes.c_int),
+        ("IGNORE_GEOMETRY", ctypes.c_int),
+        ("IGNORE_BLEND_SHAPES", ctypes.c_int)
+    ]

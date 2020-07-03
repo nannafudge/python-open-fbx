@@ -5,6 +5,8 @@ from openfbx import DLL
 
 
 class IScene(Structure):
+    _fields_ = []
+
     def get_root_element(self):
         return DLL.ofbx.ISceneGetRootElement()
 
